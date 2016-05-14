@@ -1,35 +1,75 @@
 import random
+import re
 
 class DiceRollResult(object):
     def __init__(self, values):
         self.rolls = values or []
 
+class SuccessRollResult(DiceRollResult):
+    def __init__(self, values, treshold):
+        super(SuccessRollResult, self).__init__(values)
+        self.treshold = treshold
+
+    def success(self):
+        return len([x for x in self.rolls if x >= self.treshold])
+
+    @classmethod
+    def with_treshold(cls, treshold):
+        def wrapper(*args, **kwargs):
+            kwargs['treshold'] = treshold
+            return SuccessRollResult(*args, **kwargs)
+        return wrapper
+
 class DiceRoll(object):
-    def __init__(self, dices, dice_type, explode_on=None):
+    def __init__(self, dices, dice_type, result_class=DiceRollResult):
         if int(dice_type) <= 1:
             raise ValueError('dice_type should be 1 or greater')
         self.dices = dices
         self.dice_type = int(dice_type)
+        self._result_class = result_class
+
+    def _roll(self, dices):
+        return [random.randint(1, self.dice_type) for n in xrange(dices)]
+
+    def roll(self):
+        return self._result_class(self._roll(self.dices))
+
+class ExplodingDiceRoll(DiceRoll):
+    def __init__(self, dices, dice_type, result_class=DiceRollResult, explode_on=None):
+        super(ExplodingDiceRoll, self).__init__(dices, dice_type, result_class)
         self.explode_on = explode_on or []
 
     def _roll(self, dices):
         if not dices:
             return []
-        result = [random.randint(1, self.dice_type) for n in xrange(dices)]
+        result = super(ExplodingDiceRoll, self)._roll(dices)
         exploded = len([x for x in result if x in self.explode_on])
         return result + self._roll(exploded)
 
-    def roll(self):
-        return DiceRollResult(self._roll(self.dices))
+    @classmethod
+    def with_explode_on(cls, explode_on):
+        def wrapper(*args, **kwargs):
+            kwargs['explode_on'] = explode_on
+            return ExplodingDiceRoll(*args, **kwargs)
+        return wrapper
 
-    #     self.roll = self._roll_with_explode(dices)
-    #
-    # def _roll_with_explode(self, dices):
-    #     if not dices:
-    #         return []
-    #     result = [random.randint(1,10) for n in xrange(dices)]
-    #     exploded = len([x for x in result if x == 10])
-    #     return result + self._roll_with_explode(exploded)
-    #
-    # def successes(self):
-    #     return len([value for value in self.roll if value >= 8])
+def parse(string):
+    matches = re.match(r'(?P<dices>\d)+d(?P<dice_type>\d+)(?P<explode>!(?P<explode_value>\d+)?)?(?P<treshold>>(?P<treshold_value>\d+))?', string)
+    if matches:
+        result_class = DiceRollResult
+        roll_class = DiceRoll
+        dices = int(matches.group('dices'))
+        dice_type = int(matches.group('dice_type'))
+        if matches.group('explode'):
+            explode_value = int(matches.group('explode_value') or dice_type)
+            if explode_value < dice_type:
+                explode_on = range(explode_value, dice_type+1)
+            else:
+                explode_on = [dice_type]
+            roll_class = ExplodingDiceRoll.with_explode_on(explode_on)
+        if matches.group('treshold'):
+            treshold = int(matches.group('treshold_value'))
+            result_class = SuccessRollResult.with_treshold(treshold)
+
+        return roll_class(dices, dice_type, result_class=result_class)
+    raise ValueError('invalid string.')

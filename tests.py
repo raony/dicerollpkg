@@ -1,7 +1,7 @@
 import unittest
 import mock
 
-from diceroll import DiceRoll
+from diceroll import DiceRoll, ExplodingDiceRoll, SuccessRollResult, parse, DiceRollResult
 
 @mock.patch('random.randint')
 class DiceRollTest(unittest.TestCase):
@@ -40,12 +40,85 @@ class DiceRollTest(unittest.TestCase):
         target = DiceRoll(1, 6.7)
         self.assertEquals(6, target.dice_type)
 
+    def test_result_class(self, randint_call):
+        randint_call.return_value = 2
+        target = DiceRoll(1, 7, SuccessRollResult.with_treshold(8))
+        result = target.roll()
+        self.assertIsInstance(result, SuccessRollResult)
+
+@mock.patch('random.randint')
+class ExplodingDiceRollTest(unittest.TestCase):
     def test_1d10e10_not_exploding(self, randint_call):
         randint_call.return_value = 6
-        target = DiceRoll(1, 10, explode_on=[10])
+        target = ExplodingDiceRoll(1, 10, explode_on=[10])
         self.assertEquals(1, len(target.roll().rolls))
 
     def test_1d10e10_exploding(self, randint_call):
         randint_call.side_effect = [10, 10, 5]
-        target = DiceRoll(1, 10, explode_on=[10])
+        target = ExplodingDiceRoll(1, 10, explode_on=[10])
         self.assertEquals(3, len(target.roll().rolls))
+
+    def test_1d6e5_exploding(self, randint_call):
+        randint_call.side_effect = [5, 6, 4]
+        target = ExplodingDiceRoll(1, 6, explode_on=[5,6])
+        self.assertEquals(3, len(target.roll().rolls))
+
+class SuccessDiceRollTest(unittest.TestCase):
+    def test_success(self):
+        target = SuccessRollResult([1, 2,7,9,10], 8)
+        self.assertEquals(2, target.success())
+
+class ParseRollTest(unittest.TestCase):
+    def test_simple_roll(self):
+        value = parse('1d6')
+        self.assertEquals(1, value.dices)
+        self.assertEquals(6, value.dice_type)
+        self.assertEquals(DiceRollResult, value._result_class)
+        value.roll()
+
+    def test_exploding_roll(self):
+        value = parse('1d6!')
+        self.assertIsInstance(value, ExplodingDiceRoll)
+        self.assertEquals(1, value.dices)
+        self.assertEquals(6, value.dice_type)
+        self.assertEquals([6], value.explode_on)
+        self.assertEquals(DiceRollResult, value._result_class)
+        value.roll()
+
+    def test_exploding_different_value(self):
+        value = parse('3d6!4')
+        self.assertIsInstance(value, ExplodingDiceRoll)
+        self.assertEquals(3, value.dices)
+        self.assertEquals(6, value.dice_type)
+        self.assertEquals([4,5,6], value.explode_on)
+        self.assertEquals(DiceRollResult, value._result_class)
+        value.roll()
+
+    def test_treshold(self):
+        value = parse('3d6>5')
+        self.assertEquals(3, value.dices)
+        self.assertEquals(6, value.dice_type)
+        result = value.roll()
+        self.assertIsInstance(result, SuccessRollResult)
+        self.assertEquals(5, result.treshold)
+        result.success()
+
+    def test_treshold_with_exploding(self):
+        value = parse('3d6!>5')
+        self.assertEquals(3, value.dices)
+        self.assertEquals(6, value.dice_type)
+        self.assertEquals([6], value.explode_on)
+        result = value.roll()
+        self.assertIsInstance(result, SuccessRollResult)
+        self.assertEquals(5, result.treshold)
+        result.success()
+
+    def test_treshold_with_exploding(self):
+        value = parse('3d6!3>5')
+        self.assertEquals(3, value.dices)
+        self.assertEquals(6, value.dice_type)
+        self.assertEquals([3,4,5,6], value.explode_on)
+        result = value.roll()
+        self.assertIsInstance(result, SuccessRollResult)
+        self.assertEquals(5, result.treshold)
+        result.success()
