@@ -2,12 +2,13 @@ import random
 import re
 
 class DiceRollResult(object):
-    def __init__(self, values):
+    def __init__(self, roll, values):
         self.rolls = values or []
+        self.roll = roll
 
 class SuccessRollResult(DiceRollResult):
-    def __init__(self, values, treshold):
-        super(SuccessRollResult, self).__init__(values)
+    def __init__(self, roll, values, treshold):
+        super(SuccessRollResult, self).__init__(roll, values)
         self.treshold = treshold
 
     def success(self):
@@ -32,7 +33,7 @@ class DiceRoll(object):
         return [random.randint(1, self.dice_type) for n in xrange(dices)]
 
     def roll(self):
-        return self._result_class(self._roll(self.dices))
+        return self._result_class(self, self._roll(self.dices))
 
 class ExplodingDiceRoll(DiceRoll):
     def __init__(self, dices, dice_type, result_class=DiceRollResult, explode_on=None):
@@ -54,7 +55,7 @@ class ExplodingDiceRoll(DiceRoll):
         return wrapper
 
 def validate_dice_pattern(pattern):
-    return re.match(r'(?P<dices>\d)+d(?P<dice_type>\d+)(?P<explode>!(?P<explode_value>\d+)?)?(?P<treshold>>(?P<treshold_value>\d+))?$', pattern)
+    return re.match(r'(?P<dices>\d+)d(?P<dice_type>\d+)(?P<explode>!(?P<explode_value>\d+)?)?(?P<treshold>>(?P<treshold_value>\d+))?$', pattern)
 
 def parse(string):
     matches = validate_dice_pattern(string)

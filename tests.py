@@ -76,10 +76,18 @@ class ExplodingDiceRollTest(unittest.TestCase):
 
 class SuccessDiceRollTest(unittest.TestCase):
     def test_success(self):
-        target = SuccessRollResult([1, 2,7,9,10], 8)
+        target = SuccessRollResult(None, [1, 2,7,9,10], 8)
         self.assertEquals(2, target.success())
 
 class ParseRollTest(unittest.TestCase):
+    def test_two_digit_roll(self):
+        value = parse('10d8>8')
+        self.assertEquals(10, value.dices)
+        self.assertEquals(8, value.dice_type)
+        result = value.roll()
+        self.assertIsInstance(result, SuccessRollResult)
+        result.success()
+
     def test_simple_roll(self):
         value = parse('1d6')
         self.assertEquals(1, value.dices)
