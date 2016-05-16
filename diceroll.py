@@ -53,8 +53,11 @@ class ExplodingDiceRoll(DiceRoll):
             return ExplodingDiceRoll(*args, **kwargs)
         return wrapper
 
+def validate_dice_pattern(pattern):
+    return re.match(r'(?P<dices>\d)+d(?P<dice_type>\d+)(?P<explode>!(?P<explode_value>\d+)?)?(?P<treshold>>(?P<treshold_value>\d+))?$', pattern)
+
 def parse(string):
-    matches = re.match(r'(?P<dices>\d)+d(?P<dice_type>\d+)(?P<explode>!(?P<explode_value>\d+)?)?(?P<treshold>>(?P<treshold_value>\d+))?', string)
+    matches = validate_dice_pattern(string)
     if matches:
         result_class = DiceRollResult
         roll_class = DiceRoll

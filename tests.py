@@ -1,7 +1,18 @@
 import unittest
 import mock
 
-from diceroll import DiceRoll, ExplodingDiceRoll, SuccessRollResult, parse, DiceRollResult
+from diceroll import DiceRoll, ExplodingDiceRoll, SuccessRollResult, parse, DiceRollResult, validate_dice_pattern
+
+class validate_dice_pattern_test(unittest.TestCase):
+    def test_validate_dice_pattern(self):
+        self.assertTrue(validate_dice_pattern('1d10'))
+        self.assertTrue(validate_dice_pattern('12d1>2'))
+        self.assertTrue(validate_dice_pattern('1d10!'))
+        self.assertTrue(validate_dice_pattern('1d10!2>2'))
+        self.assertFalse(validate_dice_pattern('d10'))
+        self.assertFalse(validate_dice_pattern('1d'))
+        self.assertFalse(validate_dice_pattern('1d1!!>'))
+
 
 @mock.patch('random.randint')
 class DiceRollTest(unittest.TestCase):
