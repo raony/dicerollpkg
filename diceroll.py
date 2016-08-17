@@ -4,7 +4,23 @@ import re
 class DiceRollResult(object):
     def __init__(self, roll, values):
         self.rolls = values or []
-        self.roll = roll
+        self._roll = roll
+
+class SumRollResult(DiceRollResult):
+    def __init__(self, roll, values, modifier=0):
+        super(SumRollResult, self).__init__(roll, values)
+        self.modifier = modifier
+
+    @property
+    def total(self):
+        return sum(self.rolls) + self.modifier
+
+    @classmethod
+    def with_modifier(cls, modifier):
+        def wrapper(*args, **kwargs):
+            kwargs['modifier'] = modifier
+            return SumRollResult(*args, **kwargs)
+        return wrapper
 
 class SuccessRollResult(DiceRollResult):
     def __init__(self, roll, values, treshold):
@@ -37,7 +53,7 @@ class DiceRoll(object):
 
 class ExplodingDiceRoll(DiceRoll):
     def __init__(self, dices, dice_type, result_class=DiceRollResult, explode_on=None):
-        super(ExplodingDiceRoll, self).__init__(dices, dice_type, result_class)
+        super(ExplodingDiceRoll, self).__init__(dices, dice_type, result_class=result_class)
         self.explode_on = explode_on or []
 
     def _roll(self, dices):
@@ -55,7 +71,7 @@ class ExplodingDiceRoll(DiceRoll):
         return wrapper
 
 def validate_dice_pattern(pattern):
-    return re.match(r'(?P<dices>\d+)d(?P<dice_type>\d+)(?P<explode>!(?P<explode_value>\d+)?)?(?P<treshold>>(?P<treshold_value>\d+))?$', pattern)
+    return re.match(r'(?P<dices>\d+)d(?P<dice_type>\d+)(?P<modifier>\+(?P<modifier_value>\d))?(?P<explode>!(?P<explode_value>\d+)?)?(?P<treshold>>(?P<treshold_value>\d+))?$', pattern)
 
 def parse(string):
     matches = validate_dice_pattern(string)
@@ -64,6 +80,7 @@ def parse(string):
         roll_class = DiceRoll
         dices = int(matches.group('dices'))
         dice_type = int(matches.group('dice_type'))
+
         if matches.group('explode'):
             explode_value = int(matches.group('explode_value') or dice_type)
             if explode_value < dice_type:
@@ -74,6 +91,9 @@ def parse(string):
         if matches.group('treshold'):
             treshold = int(matches.group('treshold_value'))
             result_class = SuccessRollResult.with_treshold(treshold)
+        if matches.group('modifier'):
+            modifier = int(matches.group('modifier_value'))
+            result_class = SumRollResult.with_modifier(modifier)
 
         return roll_class(dices, dice_type, result_class=result_class)
     raise ValueError('invalid string.')

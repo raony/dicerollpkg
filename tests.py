@@ -1,7 +1,10 @@
 import unittest
+
 import mock
 
-from diceroll import DiceRoll, ExplodingDiceRoll, SuccessRollResult, parse, DiceRollResult, validate_dice_pattern
+from diceroll import DiceRoll, ExplodingDiceRoll, SuccessRollResult, parse, DiceRollResult, validate_dice_pattern, \
+    SumRollResult
+
 
 class validate_dice_pattern_test(unittest.TestCase):
     def test_validate_dice_pattern(self):
@@ -53,7 +56,7 @@ class DiceRollTest(unittest.TestCase):
 
     def test_result_class(self, randint_call):
         randint_call.return_value = 2
-        target = DiceRoll(1, 7, SuccessRollResult.with_treshold(8))
+        target = DiceRoll(1, 7, result_class=SuccessRollResult.with_treshold(8))
         result = target.roll()
         self.assertIsInstance(result, SuccessRollResult)
 
@@ -73,6 +76,15 @@ class ExplodingDiceRollTest(unittest.TestCase):
         randint_call.side_effect = [5, 6, 4]
         target = ExplodingDiceRoll(1, 6, explode_on=[5,6])
         self.assertEquals(3, len(target.roll().rolls))
+
+class SumDiceResultTest(unittest.TestCase):
+    def test_positive_mod(self):
+        target = SumRollResult(None, [1,5,8], 3)
+        self.assertEquals(17, target.total)
+
+    def test_negative_mod(self):
+        target = SumRollResult(None, [1, 5, 8], -3)
+        self.assertEquals(11, target.total)
 
 class SuccessDiceRollTest(unittest.TestCase):
     def test_success(self):
@@ -141,3 +153,9 @@ class ParseRollTest(unittest.TestCase):
         self.assertIsInstance(result, SuccessRollResult)
         self.assertEquals(5, result.treshold)
         result.success()
+
+    def test_modifier(self):
+        value = parse('3d6+5')
+        result = value.roll()
+        self.assertEquals(5, result.modifier)
+        self.assertIsInstance(result, SumRollResult)
