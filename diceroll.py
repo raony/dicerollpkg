@@ -4,7 +4,7 @@ import re
 class DiceRollResult(object):
     def __init__(self, roll, values):
         self.rolls = values or []
-        self._roll = roll
+        self.roll = roll
 
 class SumRollResult(DiceRollResult):
     def __init__(self, roll, values, modifier=0):

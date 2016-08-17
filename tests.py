@@ -16,6 +16,11 @@ class validate_dice_pattern_test(unittest.TestCase):
         self.assertFalse(validate_dice_pattern('1d'))
         self.assertFalse(validate_dice_pattern('1d1!!>'))
 
+class DiceRollResultTest(unittest.TestCase):
+    def test_roll_attr(self):
+        target = DiceRollResult('roll', [1,2,3])
+        self.assertEquals('roll', target.roll)
+        self.assertEquals([1,2,3], target.rolls)
 
 @mock.patch('random.randint')
 class DiceRollTest(unittest.TestCase):
