@@ -160,7 +160,7 @@ class ParseRollTest(unittest.TestCase):
         result.success()
 
     def test_modifier(self):
-        value = parse('3d6+5')
+        value = parse('3d6+15')
         result = value.roll()
-        self.assertEquals(5, result.modifier)
+        self.assertEquals(15, result.modifier)
         self.assertIsInstance(result, SumRollResult)
